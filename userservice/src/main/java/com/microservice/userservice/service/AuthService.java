@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.microservice.userservice.dto.AuthRequest;
 import com.microservice.userservice.dto.AuthResponse;
 import com.microservice.userservice.dto.RegisterRequest;
+import com.microservice.userservice.exception.UserAlreadyExistException;
 import com.microservice.userservice.modal.Role;
 import com.microservice.userservice.modal.User;
 import com.microservice.userservice.repository.UserRepository;
@@ -22,7 +23,13 @@ public class AuthService {
 	//@Autowired
 	//private PasswordEncoder passwordEncoder;
 
-	public User register(User user) {
+	public User register(User user) throws UserAlreadyExistException {
+		Optional<User> dbUser = userRepository.findByEmail(user.getEmail());
+		
+		if(!dbUser.isEmpty()) {
+			throw new UserAlreadyExistException("User with email <"+ user.getEmail() + "> already exist!");
+		}
+		
 		return userRepository.save(user);
 	}
 	
