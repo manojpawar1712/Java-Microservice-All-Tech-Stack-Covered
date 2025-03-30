@@ -1,13 +1,16 @@
 package com.microservice.userservice.controller;
 
-import org.springframework.security.core.Authentication;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.microservice.userservice.dto.AuthRequest;
-import com.microservice.userservice.dto.AuthResponse;
 import com.microservice.userservice.dto.RegisterRequest;
 import com.microservice.userservice.exception.UserAlreadyExistException;
 import com.microservice.userservice.modal.User;
@@ -63,9 +65,13 @@ public class AuthController {
 
 	@PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest authRequest ) throws Exception {
+		Authentication authentication;
 		try {
-			Authentication authentication = authenticationManager
-			.authenticate(new UsernamePasswordAuthenticationToken(authRequest.getEmail(), authRequest.getPassword()));			
+			authentication = authenticationManager
+			.authenticate(new UsernamePasswordAuthenticationToken(authRequest.getEmail(), authRequest.getPassword()));
+			authentication.getAuthorities().forEach(auth -> {
+				System.out.println(auth);
+			});
 			
 		} catch(AuthenticationException  e) {
 			System.out.println("User name Pass Missmatch");
@@ -73,14 +79,33 @@ public class AuthController {
                     .status(HttpStatus.UNAUTHORIZED)
                     .body("{\"error\": \"Unauthorized\", \"message\": \"Invalid username or password\"}");
 		}
+		
+		List<String> roles = authentication.getAuthorities()
+	            .stream()
+	            .map(auth -> auth.getAuthority()) // Convert GrantedAuthority to String
+	            .collect(Collectors.toList());
+		
 		//Login success then proceed with token generation
-		String token = jwtService.generateToken(authRequest);
+		String token = jwtService.generateToken(authRequest, roles);
 		
 		return ResponseEntity.ok(token);
     }
+	
+	@PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestBody AuthRequest authRequest ) throws Exception {
+		return ResponseEntity.ok("");
+    }
 
-	@GetMapping("/test")
-	public String Hello() {
-		return "Test Succes";
+	@GetMapping("/test1")
+	@PreAuthorize("hasRole('ADMIN')") 
+	public String Hello1() {
+		return "Test Succes Acces for admin";
+	}
+	
+	
+	@GetMapping("/test2")
+	@PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
+	public String Hello2() {
+		return "Test Succes Acces for admin and customer";
 	}
 }

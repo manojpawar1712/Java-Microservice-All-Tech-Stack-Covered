@@ -2,6 +2,7 @@ package com.microservice.userservice.service;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -24,8 +25,9 @@ public class JwtService {
 	@Value("${jwt.secret}")
 	private String secretKey;
 	
-	public String generateToken(AuthRequest authRequest) {
+	public String generateToken(AuthRequest authRequest, List<String> roles) {
 		Map<String, Object> claims = new HashMap<>();
+		claims.put("roles", roles);
 		return Jwts
 				.builder()
 				.claims()
